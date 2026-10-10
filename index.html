@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Coin Counter</title>
+<meta name="description" content="Count coins in a photo and get the total value.">
+<meta name="theme-color" content="#14161b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f4f3ef;
+    --surface: #ffffff;
+    --surface-2: #ebe9e3;
+    --text: #1b1d22;
+    --muted: #62656d;
+    --line: #d9d6ce;
+    --accent: #1f6feb;
+    --accent-text: #ffffff;
+    --good: #16a34a;
+    --manual: #2563eb;
+    --danger: #c2410c;
+    --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #14161b;
+      --surface: #1d2027;
+      --surface-2: #272b34;
+      --text: #eceef2;
+      --muted: #9aa0ab;
+      --line: #333845;
+      --accent: #4c8dff;
+      --accent-text: #0b1020;
+      --shadow: 0 1px 2px rgba(0,0,0,.4);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    -webkit-tap-highlight-color: transparent;
+  }
+  main {
+    flex: 1;
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px 16px;
+  }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  header h1 { font-size: 1.25rem; margin: 0; flex: 1; letter-spacing: -.01em; }
+  .pill {
+    font-size: .78rem; color: var(--muted); background: var(--surface-2);
+    padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+  }
+  .pill.ok::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--good); margin-right: 6px; vertical-align: 1px; }
+  .pill.err { color: var(--danger); }
+
+  button, .btn {
+    font: inherit; border: 1px solid var(--line); background: var(--surface); color: var(--text);
+    border-radius: 12px; padding: 10px 14px; cursor: pointer; display: inline-flex; align-items: center;
+    justify-content: center; gap: 8px; min-height: 44px; touch-action: manipulation;
+  }
+  button:disabled { opacity: .45; cursor: default; }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+  button svg, .btn svg { width: 20px; height: 20px; flex: none; }
+
+  .section-label { font-size: .8rem; color: var(--muted); margin: 0 0 6px; text-transform: uppercase; letter-spacing: .06em; }
+
+  /* Coin picker */
+  .coins { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 16px; }
+  .coin-btn {
+    flex-direction: column; gap: 4px; padding: 8px 4px; min-height: 76px; border-radius: 14px; font-size: .82rem;
+  }
+  .coin-btn .disc { width: 28px; height: 28px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(0,0,0,.15), inset -3px -4px 6px rgba(0,0,0,.18); }
+  .coin-btn .val { color: var(--muted); font-size: .75rem; }
+  .coin-btn[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; font-weight: 600; }
+
+  /* Empty state */
+  .picker {
+    background: var(--surface); border: 1px dashed var(--line); border-radius: 18px; padding: 28px 18px;
+    text-align: center; box-shadow: var(--shadow);
+  }
+  .picker.drag { border-color: var(--accent); }
+  .picker p { margin: 0 0 16px; color: var(--muted); }
+  .picker .actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .picker .actions .btn { flex: 1 1 140px; max-width: 220px; }
+  .tips { margin: 18px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: .85rem; text-align: left; display: grid; gap: 4px; }
+  .tips li::before { content: "•"; margin-right: 8px; color: var(--accent); }
+  input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+  /* Photo stage */
+  .stage { text-align: center; }
+  .frame {
+    position: relative; display: inline-block; line-height: 0; border-radius: 14px; overflow: hidden;
+    background: var(--surface-2); box-shadow: var(--shadow); max-width: 100%;
+  }
+  #photo { display: block; max-width: 100%; max-height: 68vh; width: auto; height: auto; }
+  #overlay { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: manipulation; cursor: crosshair; }
+  .busy {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: rgba(0,0,0,.45); color: #fff; font: 600 15px/1.2 system-ui, sans-serif;
+  }
+  .spinner { width: 22px; height: 22px; border-radius: 50%; border: 3px solid rgba(255,255,255,.35); border-top-color: #fff; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hint { color: var(--muted); font-size: .88rem; margin: 10px 0 0; }
+  .legend { display: inline-flex; align-items: center; gap: 5px; margin: 0 4px; }
+  .legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .toolbar button { flex: 1 1 0; min-width: 0; padding-inline: 8px; font-size: .92rem; }
+  .tuning {
+    margin-top: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px;
+    display: grid; gap: 10px;
+  }
+  .tuning label { display: flex; align-items: center; gap: 10px; font-size: .9rem; }
+  .tuning input[type=range] { flex: 1; accent-color: var(--accent); min-width: 0; }
+  .tuning input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--accent); }
+  .tuning output { min-width: 1.5em; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .tuning small { color: var(--muted); }
+
+  /* Result bar */
+  .result {
+    position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--line);
+    padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 12px);
+  }
+  .result-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: baseline; gap: 12px; }
+  .count { flex: 1; font-size: 1rem; color: var(--muted); }
+  .count b { color: var(--text); font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+  .total { font-size: 1.9rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 88px); transform: translateX(-50%);
+    background: #22252c; color: #fff; padding: 8px 8px 8px 14px; border-radius: 12px; display: flex; align-items: center; gap: 10px;
+    font-size: .9rem; box-shadow: 0 6px 24px rgba(0,0,0,.3); max-width: calc(100% - 32px);
+  }
+  .toast button { min-height: 34px; padding: 4px 10px; background: transparent; color: #8fb6ff; border: 0; font-weight: 600; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Coin Counter</h1>
+    <button id="installBtn" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg>
+      Install
+    </button>
+    <span id="status" class="pill">Loading detector…</span>
+  </header>
+
+  <p class="section-label" id="coinLabel">Coin type</p>
+  <div class="coins" role="group" aria-labelledby="coinLabel" id="coins"></div>
+
+  <input type="file" id="cameraInput" accept="image/*" capture="environment">
+  <input type="file" id="fileInput" accept="image/*">
+
+  <section class="picker" id="picker">
+    <p>Lay the coins flat on a plain, contrasting surface and take the photo from straight above.</p>
+    <div class="actions">
+      <label class="btn btn-primary" for="cameraInput">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        Take photo
+      </label>
+      <label class="btn" for="fileInput">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>
+        Upload photo
+      </label>
+    </div>
+    <ul class="tips">
+      <li>Keep coins from overlapping. Touching is fine.</li>
+      <li>Avoid strong glare and busy patterns behind the coins.</li>
+      <li>Use one coin type per photo.</li>
+    </ul>
+  </section>
+
+  <section class="stage" id="stage" hidden>
+    <div class="frame">
+      <canvas id="photo"></canvas>
+      <canvas id="overlay" aria-label="Photo with coin markers. Tap a marker to remove it, or tap elsewhere to add a coin."></canvas>
+      <div class="busy" id="busy" hidden><span class="spinner"></span><span id="busyText">Finding coins…</span></div>
+    </div>
+    <p class="hint">
+      Tap a marker to remove it. Tap a missed coin to add it.<br>
+      <span class="legend"><i style="background:var(--good)"></i>found</span>
+      <span class="legend"><i style="background:var(--manual)"></i>added by you</span>
+    </p>
+    <div class="toolbar">
+      <button id="undoBtn" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+        Undo
+      </button>
+      <button id="resetBtn" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+        Reset
+      </button>
+      <button id="newBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        Retake
+      </button>
+    </div>
+    <div class="tuning">
+      <label>Sensitivity
+        <input type="range" id="sens" min="1" max="10" step="1" value="4">
+        <output id="sensOut">4</output>
+      </label>
+      <label><input type="checkbox" id="sameSize" checked> Only count coins of the same size</label>
+      <small>Changing these finds coins again. Coins you added are kept, and markers you removed come back.</small>
+    </div>
+  </section>
+</main>
+
+<div class="result" aria-live="polite">
+  <div class="result-inner">
+    <div class="count"><b id="count">0</b> <span id="countLabel">quarters</span></div>
+    <div class="total" id="total">$0.00</div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden role="status"><span id="toastText"></span><button id="toastUndo">Undo</button></div>
+
+<script>
+'use strict';
+
+const COINS = {
+  penny:   { label: 'Penny',   plural: 'pennies',      value: 0.01, color: 'radial-gradient(circle at 35% 30%, #e7a77c, #b0643a 60%, #7c3f20)' },
+  nickel:  { label: 'Nickel',  plural: 'nickels',      value: 0.05, color: 'radial-gradient(circle at 35% 30%, #eef0f2, #a9adb3 60%, #73777e)' },
+  dime:    { label: 'Dime',    plural: 'dimes',        value: 0.10, color: 'radial-gradient(circle at 35% 30%, #f4f5f7, #b8bcc2 60%, #7d8189)' },
+  quarter: { label: 'Quarter', plural: 'quarters',     value: 0.25, color: 'radial-gradient(circle at 35% 30%, #f1f2f4, #b0b4ba 60%, #777b83)' },
+  dollar:  { label: 'Dollar',  plural: 'dollar coins', value: 1.00, color: 'radial-gradient(circle at 35% 30%, #f3dd8a, #c9a43c 60%, #8a6d1e)' },
+};
+const DISPLAY_MAX = 1600; // longest side kept for display and detection
+const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const $ = id => document.getElementById(id);
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('coin-counter:' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('coin-counter:' + k, JSON.stringify(v)); } catch {} },
+};
+
+const state = {
+  coin: COINS[store.get('coin', 'quarter')] ? store.get('coin', 'quarter') : 'quarter',
+  markers: [],        // [{x, y, r, manual}] in photo pixels
+  detected: [],       // last detector output, for Reset
+  radius: 0,          // typical coin radius from the detector
+  history: [],        // marker snapshots for Undo
+  hasPhoto: false,
+  cvReady: false,
+  jobId: 0,
+};
+
+/* ---------- Coin picker ---------- */
+const coinsEl = $('coins');
+for (const [key, c] of Object.entries(COINS)) {
+  const b = document.createElement('button');
+  b.className = 'coin-btn';
+  b.dataset.coin = key;
+  b.innerHTML = `<span class="disc" style="background:${c.color}"></span><span>${c.label}</span><span class="val">${c.value < 1 ? Math.round(c.value * 100) + '¢' : '$1'}</span>`;
+  b.addEventListener('click', () => { state.coin = key; store.set('coin', key); renderCoins(); renderTotals(); });
+  coinsEl.append(b);
+}
+function renderCoins() {
+  for (const b of coinsEl.children) b.setAttribute('aria-pressed', String(b.dataset.coin === state.coin));
+}
+
+/* ---------- Detector worker ---------- */
+const statusEl = $('status');
+function setStatus(text, cls) { statusEl.textContent = text; statusEl.className = 'pill' + (cls ? ' ' + cls : ''); }
+
+let worker;
+try {
+  worker = new Worker('worker.js');
+  worker.onmessage = e => {
+    const msg = e.data;
+    if (msg.type === 'ready') {
+      state.cvReady = true;
+      setStatus('Ready', 'ok');
+      if (state.hasPhoto && !state.detected.length) detect();
+    } else if (msg.type === 'result') {
+      if (msg.id !== state.jobId) return; // a newer run superseded this one
+      showBusy(false);
+      onDetected(msg.circles, msg.radius);
+    } else if (msg.type === 'error') {
+      showBusy(false);
+      setStatus('Detector error', 'err');
+      toast('Detection failed: ' + msg.message);
+    }
+  };
+  worker.onerror = e => { setStatus('Detector failed to load', 'err'); showBusy(false); console.error(e); };
+} catch (err) {
+  setStatus('Detector unavailable', 'err');
+}
+setTimeout(() => { if (!state.cvReady && statusEl.textContent.startsWith('Loading')) setStatus('Loading detector (about 10 MB the first time)…'); }, 2500);
+
+/* ---------- Photo loading ---------- */
+const photo = $('photo');
+const overlay = $('overlay');
+const pctx = photo.getContext('2d', { willReadFrequently: true });
+const octx = overlay.getContext('2d');
+
+async function decode(file) {
+  try {
+    return await createImageBitmap(file, { imageOrientation: 'from-image' });
+  } catch {
+    return await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Could not read that image'));
+      img.src = URL.createObjectURL(file);
+    });
+  }
+}
+
+async function loadFile(file) {
+  if (!file || !file.type.startsWith('image/')) { toast('Please choose an image file.'); return; }
+  let img;
+  try { img = await decode(file); } catch (err) { toast(err.message); return; }
+  const w0 = img.width || img.naturalWidth, h0 = img.height || img.naturalHeight;
+  const s = Math.min(1, DISPLAY_MAX / Math.max(w0, h0));
+  const w = Math.round(w0 * s), h = Math.round(h0 * s);
+  photo.width = overlay.width = w;
+  photo.height = overlay.height = h;
+  pctx.drawImage(img, 0, 0, w, h);
+  if (img.close) img.close();
+
+  state.hasPhoto = true;
+  state.markers = [];
+  state.detected = [];
+  state.history = [];
+  state.radius = 0;
+  $('picker').hidden = true;
+  $('stage').hidden = false;
+  draw();
+  renderTotals();
+  detect();
+}
+
+for (const id of ['cameraInput', 'fileInput']) {
+  $(id).addEventListener('change', e => { loadFile(e.target.files[0]); e.target.value = ''; });
+}
+$('newBtn').addEventListener('click', () => $('cameraInput').click());
+
+// Drag and drop for desktop
+const picker = $('picker');
+['dragenter', 'dragover'].forEach(t => document.addEventListener(t, e => { e.preventDefault(); picker.classList.add('drag'); }));
+['dragleave', 'drop'].forEach(t => document.addEventListener(t, e => { e.preventDefault(); picker.classList.remove('drag'); }));
+document.addEventListener('drop', e => { const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) loadFile(f); });
+
+/* ---------- Detection ---------- */
+function showBusy(on, text) {
+  $('busy').hidden = !on;
+  if (text) $('busyText').textContent = text;
+}
+
+function detect() {
+  if (!state.hasPhoto || !worker) return;
+  if (!state.cvReady) { showBusy(true, 'Loading detector…'); return; }
+  showBusy(true, 'Finding coins…');
+  const img = pctx.getImageData(0, 0, photo.width, photo.height);
+  const id = ++state.jobId;
+  worker.postMessage({
+    id, width: img.width, height: img.height, buffer: img.data.buffer,
+    sensitivity: +$('sens').value, sameSize: $('sameSize').checked,
+  }, [img.data.buffer]);
+}
+
+function onDetected(circles, radius) {
+  state.detected = circles.map(c => ({ x: c.x, y: c.y, r: c.r, manual: false }));
+  state.radius = radius || 0;
+  // Keep coins the user added unless the detector now covers them.
+  const manual = state.markers.filter(m => m.manual && !state.detected.some(d => Math.hypot(d.x - m.x, d.y - m.y) < d.r));
+  state.markers = state.detected.concat(manual);
+  state.history = [];
+  draw();
+  renderTotals();
+  if (!circles.length) toast('No coins found. Try a higher sensitivity, or tap each coin to add it.');
+}
+
+/* ---------- Editing ---------- */
+function snapshot() {
+  state.history.push(state.markers.map(m => ({ ...m })));
+  if (state.history.length > 100) state.history.shift();
+}
+
+function markerRadius() {
+  if (state.radius) return state.radius;
+  const rs = state.markers.map(m => m.r).sort((a, b) => a - b);
+  return rs.length ? rs[rs.length >> 1] : Math.min(photo.width, photo.height) * 0.06;
+}
+
+overlay.addEventListener('click', e => {
+  if (!state.hasPhoto || !$('busy').hidden) return;
+  const rect = overlay.getBoundingClientRect();
+  const k = overlay.width / rect.width; // photo pixels per CSS pixel
+  const x = (e.clientX - rect.left) * k;
+  const y = (e.clientY - rect.top) * k;
+  const slop = 16 * k; // a little extra reach for fingers on small coins
+
+  let hit = -1, best = Infinity;
+  state.markers.forEach((m, i) => {
+    const d = Math.hypot(m.x - x, m.y - y);
+    if (d <= Math.max(m.r, slop) && d < best) { best = d; hit = i; }
+  });
+
+  snapshot();
+  if (hit >= 0) {
+    state.markers.splice(hit, 1);
+    toast('Removed a coin', true);
+  } else {
+    state.markers.push({ x, y, r: markerRadius(), manual: true });
+    toast('Added a coin', true);
+  }
+  draw();
+  renderTotals();
+});
+
+function undo() {
+  if (!state.history.length) return;
+  state.markers = state.history.pop();
+  draw();
+  renderTotals();
+  hideToast();
+}
+$('undoBtn').addEventListener('click', undo);
+$('toastUndo').addEventListener('click', undo);
+$('resetBtn').addEventListener('click', () => {
+  snapshot();
+  state.markers = state.detected.map(m => ({ ...m }));
+  draw();
+  renderTotals();
+  toast('Back to the detected coins', true);
+});
+
+const sens = $('sens');
+sens.value = store.get('sensitivity', 4);
+$('sensOut').value = sens.value;
+let sensTimer;
+sens.addEventListener('input', () => {
+  $('sensOut').value = sens.value;
+  clearTimeout(sensTimer);
+  sensTimer = setTimeout(() => { store.set('sensitivity', +sens.value); detect(); }, 250);
+});
+$('sameSize').addEventListener('change', detect);
+
+/* ---------- Rendering ---------- */
+function draw() {
+  const w = overlay.width, h = overlay.height;
+  octx.clearRect(0, 0, w, h);
+  const lw = Math.max(2, Math.min(w, h) / 260);
+  const css = getComputedStyle(document.documentElement);
+  const good = css.getPropertyValue('--good').trim() || '#16a34a';
+  const manual = css.getPropertyValue('--manual').trim() || '#2563eb';
+
+  state.markers.forEach((m, i) => {
+    const color = m.manual ? manual : good;
+    // dark halo so the ring shows on light and dark coins alike
+    octx.beginPath();
+    octx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+    octx.lineWidth = lw * 2.4;
+    octx.strokeStyle = 'rgba(0,0,0,.45)';
+    octx.stroke();
+    octx.lineWidth = lw;
+    octx.strokeStyle = color;
+    octx.setLineDash(m.manual ? [lw * 3, lw * 2] : []);
+    octx.stroke();
+    octx.setLineDash([]);
+
+    // numbered badge in the middle
+    const fs = Math.max(11, Math.min(m.r * 0.55, 40));
+    const label = String(i + 1);
+    octx.font = `700 ${fs}px system-ui, sans-serif`;
+    const bw = Math.max(fs * 1.25, octx.measureText(label).width + fs * 0.7);
+    const bh = fs * 1.25;
+    octx.fillStyle = color;
+    octx.beginPath();
+    if (octx.roundRect) octx.roundRect(m.x - bw / 2, m.y - bh / 2, bw, bh, bh / 2); else octx.rect(m.x - bw / 2, m.y - bh / 2, bw, bh);
+    octx.fill();
+    octx.fillStyle = '#fff';
+    octx.textAlign = 'center';
+    octx.textBaseline = 'middle';
+    octx.fillText(label, m.x, m.y + fs * 0.04);
+  });
+}
+
+function renderTotals() {
+  const n = state.markers.length;
+  const c = COINS[state.coin];
+  $('count').textContent = n;
+  $('countLabel').textContent = n === 1 ? c.label.toLowerCase() + (state.coin === 'dollar' ? ' coin' : '') : c.plural;
+  $('total').textContent = money.format(Math.round(n * c.value * 100) / 100);
+  $('undoBtn').disabled = !state.history.length;
+  $('resetBtn').disabled = !state.hasPhoto;
+}
+
+/* ---------- Toast ---------- */
+let toastTimer;
+function toast(text, withUndo) {
+  $('toastText').textContent = text;
+  $('toastUndo').hidden = !withUndo;
+  $('toast').hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, withUndo ? 3500 : 5000);
+}
+function hideToast() { $('toast').hidden = true; }
+
+/* ---------- Install (PWA) ---------- */
+let installEvent;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvent = e; $('installBtn').hidden = false; });
+$('installBtn').addEventListener('click', async () => {
+  if (!installEvent) return;
+  installEvent.prompt();
+  await installEvent.userChoice;
+  installEvent = null;
+  $('installBtn').hidden = true;
+});
+window.addEventListener('appinstalled', () => { $('installBtn').hidden = true; });
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  navigator.serviceWorker.register('sw.js').catch(err => console.warn('Service worker not registered', err));
+}
+
+renderCoins();
+renderTotals();
+</script>
+</body>
+</html>
