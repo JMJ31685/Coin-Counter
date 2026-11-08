@@ -57,7 +57,7 @@
     margin: 0 auto;
     padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px 16px;
   }
-  header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
   header h1 { font-size: 1.25rem; margin: 0; flex: 1; letter-spacing: -.01em; }
   .pill {
     font-size: .78rem; color: var(--muted); background: var(--surface-2);
@@ -77,14 +77,56 @@
 
   .section-label { font-size: .8rem; color: var(--muted); margin: 0 0 6px; text-transform: uppercase; letter-spacing: .06em; }
 
-  /* Coin picker */
-  .coins { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 16px; }
-  .coin-btn {
-    flex-direction: column; gap: 4px; padding: 8px 4px; min-height: 76px; border-radius: 14px; font-size: .82rem;
+  /* Controls panel – stays ABOVE the photo while verifying so no scrolling */
+  .controls {
+    display: grid; gap: 10px; margin-bottom: 14px;
   }
-  .coin-btn .disc { width: 28px; height: 28px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(0,0,0,.15), inset -3px -4px 6px rgba(0,0,0,.18); }
-  .coin-btn .val { color: var(--muted); font-size: .75rem; }
-  .coin-btn[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; font-weight: 600; }
+  .panel {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; box-shadow: var(--shadow);
+  }
+  /* Collapsible panels */
+  .panel-toggle {
+    width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: transparent; border: 0; padding: 0 0 8px; min-height: 32px; text-align: left;
+    font-size: .9rem; font-weight: 700;
+  }
+  .panel-toggle .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .panel-toggle .t em { font-style: normal; color: var(--muted); font-weight: 400; }
+  .panel-toggle .chev { flex: none; color: var(--muted); font-size: 1rem; transition: transform .2s; }
+  .panel.collapsed .panel-toggle { padding-bottom: 0; }
+  .panel.collapsed .panel-body { display: none; }
+  .panel.collapsed .chev { transform: rotate(-90deg); }
+
+  /* Mode switch */
+  .mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--surface-2); border-radius: 12px; padding: 4px; margin-bottom: 4px; }
+  .mode-switch button { border: 0; background: transparent; min-height: 40px; border-radius: 9px; font-weight: 600; font-size: .92rem; }
+  .mode-switch button[aria-pressed="true"] { background: var(--surface); box-shadow: var(--shadow); }
+
+  /* Coin picker – text only, no discs (silver coins were indistinguishable) */
+  .coins { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .coin-btn {
+    flex-direction: column; gap: 2px; padding: 10px 2px; min-height: 56px; border-radius: 12px; font-size: .88rem; font-weight: 600;
+  }
+  .coin-btn .val { color: var(--muted); font-size: .75rem; font-weight: 400; }
+  .coin-btn[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+
+  /* Rolls */
+  .rolls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .rolls .stepper { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+  .rolls .stepper button { width: 44px; height: 44px; min-height: 44px; padding: 0; font-size: 1.2rem; font-weight: 700; }
+  .rolls .num { min-width: 2.2em; text-align: center; font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rolls .quick { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .rolls .quick button { min-height: 36px; padding: 6px 12px; border-radius: 999px; font-size: .85rem; }
+  .rolls .quick button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 700; }
+  .rolls small { color: var(--muted); display: block; margin-top: 6px; }
+
+  /* Tuning – also above photo now */
+  .tuning { display: grid; gap: 10px; }
+  .tuning label { display: flex; align-items: center; gap: 10px; font-size: .9rem; }
+  .tuning input[type=range] { flex: 1; accent-color: var(--accent); min-width: 0; }
+  .tuning input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--accent); }
+  .tuning output { min-width: 1.5em; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .tuning small { color: var(--muted); }
 
   /* Empty state */
   .picker {
@@ -105,7 +147,7 @@
     position: relative; display: inline-block; line-height: 0; border-radius: 14px; overflow: hidden;
     background: var(--surface-2); box-shadow: var(--shadow); max-width: 100%;
   }
-  #photo { display: block; max-width: 100%; max-height: 68vh; width: auto; height: auto; }
+  #photo { display: block; max-width: 100%; max-height: 52vh; width: auto; height: auto; }
   #overlay { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: manipulation; cursor: crosshair; }
   .busy {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -119,25 +161,18 @@
 
   .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .toolbar button { flex: 1 1 0; min-width: 0; padding-inline: 8px; font-size: .92rem; }
-  .tuning {
-    margin-top: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px;
-    display: grid; gap: 10px;
-  }
-  .tuning label { display: flex; align-items: center; gap: 10px; font-size: .9rem; }
-  .tuning input[type=range] { flex: 1; accent-color: var(--accent); min-width: 0; }
-  .tuning input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--accent); }
-  .tuning output { min-width: 1.5em; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
-  .tuning small { color: var(--muted); }
 
   /* Result bar */
   .result {
     position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--line);
-    padding: 12px 16px calc(env(safe-area-inset-bottom, 0px) + 12px);
+    padding: 10px 16px calc(env(safe-area-inset-bottom, 0px) + 10px);
   }
   .result-inner { max-width: 760px; margin: 0 auto; display: flex; align-items: baseline; gap: 12px; }
-  .count { flex: 1; font-size: 1rem; color: var(--muted); }
+  .count { flex: 1; font-size: 1rem; color: var(--muted); line-height: 1.2; }
   .count b { color: var(--text); font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+  .count small { display: block; font-size: .82rem; color: var(--muted); }
   .total { font-size: 1.9rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .total small { font-size: .95rem; font-weight: 600; color: var(--muted); }
 
   .toast {
     position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 88px); transform: translateX(-50%);
@@ -159,8 +194,64 @@
     <span id="status" class="pill">Loading detector…</span>
   </header>
 
-  <p class="section-label" id="coinLabel">Coin type</p>
-  <div class="coins" role="group" aria-labelledby="coinLabel" id="coins"></div>
+  <!-- v2: All controls ABOVE the photo while analyzing. No scroll-up needed to verify. -->
+  <div class="controls">
+    <div class="panel" id="modePanel" aria-label="Mode">
+      <button class="panel-toggle" id="modeToggle" aria-expanded="true" aria-controls="modeBody">
+        <span class="t">Value / Quick count — <em id="modeSummary">Value</em></span>
+        <span class="chev" aria-hidden="true">▾</span>
+      </button>
+      <div class="panel-body" id="modeBody">
+        <div class="mode-switch" role="group" aria-label="Counting mode">
+          <button id="modeValue" aria-pressed="true">💰 Value</button>
+          <button id="modeQuick" aria-pressed="false">⚡ Quick count</button>
+        </div>
+        <small id="modeHint" style="color:var(--muted);font-size:.85rem">Pick a coin type — total = count × value.</small>
+      </div>
+    </div>
+
+    <div class="panel" id="coinPanel">
+      <button class="panel-toggle" id="coinToggle" aria-expanded="true" aria-controls="coinBody">
+        <span class="t">Coin type & rolls — <em id="coinSummary">Quarter • 0 rolls</em></span>
+        <span class="chev" aria-hidden="true">▾</span>
+      </button>
+      <div class="panel-body" id="coinBody">
+        <p class="section-label" id="coinLabel">Coin type</p>
+        <div class="coins" role="group" aria-labelledby="coinLabel" id="coins"></div>
+
+        <div class="rolls" style="margin-top:14px">
+          <div>
+            <strong>Coin rolls (not photographed)</strong>
+            <div id="rollInfo" style="color:var(--muted);font-size:.85rem">1 roll = 40 quarters = $10.00</div>
+          </div>
+          <div class="stepper" aria-label="Number of rolls">
+            <button id="rollMinus" aria-label="Remove one roll">−</button>
+            <span class="num" id="rollCount">0</span>
+            <button id="rollPlus" aria-label="Add one roll">+</button>
+          </div>
+        </div>
+        <div class="rolls">
+          <div class="quick" id="rollQuick" role="group" aria-label="Quick roll counts"></div>
+          <small id="rollBreakdown">0 rolls = 0 coins = $0.00</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="tuningPanel" aria-label="Detection settings">
+      <button class="panel-toggle" id="tuningToggle" aria-expanded="true" aria-controls="tuningBody">
+        <span class="t">Sensitivity & detection — <em id="sensSummary">4 • Same-size on</em></span>
+        <span class="chev" aria-hidden="true">▾</span>
+      </button>
+      <div class="panel-body tuning" id="tuningBody">
+        <label>Sensitivity
+          <input type="range" id="sens" min="1" max="10" step="1" value="4">
+          <output id="sensOut">4</output>
+        </label>
+        <label><input type="checkbox" id="sameSize" checked> Only count coins of the same size</label>
+        <small>Changing these finds coins again. Coins you added are kept, and markers you removed come back.</small>
+      </div>
+    </div>
+  </div>
 
   <input type="file" id="cameraInput" accept="image/*" capture="environment">
   <input type="file" id="fileInput" accept="image/*">
@@ -180,7 +271,7 @@
     <ul class="tips">
       <li>Keep coins from overlapping. Touching is fine.</li>
       <li>Avoid strong glare and busy patterns behind the coins.</li>
-      <li>Use one coin type per photo.</li>
+      <li>Value mode: use one coin type per photo. Quick mode: any mix, count only.</li>
     </ul>
   </section>
 
@@ -209,20 +300,12 @@
         Retake
       </button>
     </div>
-    <div class="tuning">
-      <label>Sensitivity
-        <input type="range" id="sens" min="1" max="10" step="1" value="4">
-        <output id="sensOut">4</output>
-      </label>
-      <label><input type="checkbox" id="sameSize" checked> Only count coins of the same size</label>
-      <small>Changing these finds coins again. Coins you added are kept, and markers you removed come back.</small>
-    </div>
   </section>
 </main>
 
 <div class="result" aria-live="polite">
   <div class="result-inner">
-    <div class="count"><b id="count">0</b> <span id="countLabel">quarters</span></div>
+    <div class="count"><b id="count">0</b> <span id="countLabel">quarters</span><small id="countBreakdown"></small></div>
     <div class="total" id="total">$0.00</div>
   </div>
 </div>
@@ -232,14 +315,15 @@
 <script>
 'use strict';
 
+/* US coin data + standard roll sizes – no disc images (silver coins indistinguishable) */
 const COINS = {
-  penny:   { label: 'Penny',   plural: 'pennies',      value: 0.01, color: 'radial-gradient(circle at 35% 30%, #e7a77c, #b0643a 60%, #7c3f20)' },
-  nickel:  { label: 'Nickel',  plural: 'nickels',      value: 0.05, color: 'radial-gradient(circle at 35% 30%, #eef0f2, #a9adb3 60%, #73777e)' },
-  dime:    { label: 'Dime',    plural: 'dimes',        value: 0.10, color: 'radial-gradient(circle at 35% 30%, #f4f5f7, #b8bcc2 60%, #7d8189)' },
-  quarter: { label: 'Quarter', plural: 'quarters',     value: 0.25, color: 'radial-gradient(circle at 35% 30%, #f1f2f4, #b0b4ba 60%, #777b83)' },
-  dollar:  { label: 'Dollar',  plural: 'dollar coins', value: 1.00, color: 'radial-gradient(circle at 35% 30%, #f3dd8a, #c9a43c 60%, #8a6d1e)' },
+  penny:   { label: 'Penny',   plural: 'pennies',      value: 0.01, rollSize: 50 },
+  nickel:  { label: 'Nickel',  plural: 'nickels',      value: 0.05, rollSize: 40 },
+  dime:    { label: 'Dime',    plural: 'dimes',        value: 0.10, rollSize: 50 },
+  quarter: { label: 'Quarter', plural: 'quarters',     value: 0.25, rollSize: 40 },
+  dollar:  { label: 'Dollar',  plural: 'dollar coins', value: 1.00, rollSize: 25 },
 };
-const DISPLAY_MAX = 1600; // longest side kept for display and detection
+const DISPLAY_MAX = 1600;
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 const $ = id => document.getElementById(id);
 
@@ -248,30 +332,104 @@ const store = {
   set(k, v) { try { localStorage.setItem('coin-counter:' + k, JSON.stringify(v)); } catch {} },
 };
 
+const savedRolls = store.get('rolls', {});
 const state = {
   coin: COINS[store.get('coin', 'quarter')] ? store.get('coin', 'quarter') : 'quarter',
-  markers: [],        // [{x, y, r, manual}] in photo pixels
-  detected: [],       // last detector output, for Reset
-  radius: 0,          // typical coin radius from the detector
-  history: [],        // marker snapshots for Undo
+  mode: store.get('mode', 'value') === 'quick' ? 'quick' : 'value',
+  rolls: { penny:0, nickel:0, dime:0, quarter:0, dollar:0, ...savedRolls },
+  markers: [],
+  detected: [],
+  radius: 0,
+  history: [],
   hasPhoto: false,
   cvReady: false,
   jobId: 0,
 };
 
-/* ---------- Coin picker ---------- */
+/* ---------- Collapsible panels ---------- */
+function makeCollapsible(panelId, toggleId, storageKey, defaultOpen = true) {
+  const panel = $(panelId);
+  const toggle = $(toggleId);
+  const saved = store.get('collapsed:' + storageKey, defaultOpen ? false : true);
+  // saved=true means collapsed
+  function apply(collapsed) {
+    panel.classList.toggle('collapsed', collapsed);
+    toggle.setAttribute('aria-expanded', String(!collapsed));
+    store.set('collapsed:' + storageKey, collapsed);
+  }
+  apply(saved);
+  toggle.addEventListener('click', () => apply(!panel.classList.contains('collapsed')));
+}
+makeCollapsible('modePanel', 'modeToggle', 'mode', true);
+makeCollapsible('coinPanel', 'coinToggle', 'coin', true);
+makeCollapsible('tuningPanel', 'tuningToggle', 'tuning', false); // start tuning collapsed by default? keep user pref after first change
+// Actually default tuning closed helps photo visibility; user can open. If they had pref saved, it overrides.
+
+function updateSummaries() {
+  $('modeSummary').textContent = state.mode === 'quick' ? 'Quick count' : 'Value';
+  const c = COINS[state.coin];
+  const n = state.rolls[state.coin] || 0;
+  $('coinSummary').textContent = `${c.label} • ${n} roll${n===1?'':'s'}`;
+  const sens = $('sens') ? $('sens').value : '4';
+  const same = $('sameSize') && $('sameSize').checked ? 'Same-size on' : 'Same-size off';
+  $('sensSummary').textContent = `${sens} • ${same}`;
+}
+
+/* ---------- Mode ---------- */
+function renderMode() {
+  $('modeValue').setAttribute('aria-pressed', String(state.mode === 'value'));
+  $('modeQuick').setAttribute('aria-pressed', String(state.mode === 'quick'));
+  $('coinPanel').style.display = state.mode === 'quick' ? 'none' : '';
+  $('modeHint').textContent = state.mode === 'quick'
+    ? 'Quick count — just counts coins, no value. Mixed coins OK.'
+    : 'Pick a coin type — total = count × value + rolls.';
+  updateSummaries();
+  renderTotals();
+}
+$('modeValue').addEventListener('click', () => { state.mode = 'value'; store.set('mode', 'value'); renderMode(); });
+$('modeQuick').addEventListener('click', () => { state.mode = 'quick'; store.set('mode', 'quick'); renderMode(); });
+
+/* ---------- Coin picker + rolls ---------- */
 const coinsEl = $('coins');
 for (const [key, c] of Object.entries(COINS)) {
   const b = document.createElement('button');
   b.className = 'coin-btn';
   b.dataset.coin = key;
-  b.innerHTML = `<span class="disc" style="background:${c.color}"></span><span>${c.label}</span><span class="val">${c.value < 1 ? Math.round(c.value * 100) + '¢' : '$1'}</span>`;
-  b.addEventListener('click', () => { state.coin = key; store.set('coin', key); renderCoins(); renderTotals(); });
+  b.innerHTML = `<span>${c.label}</span><span class="val">${c.value < 1 ? Math.round(c.value * 100) + '¢' : '$1'}</span>`;
+  b.addEventListener('click', () => { state.coin = key; store.set('coin', key); renderCoins(); renderRolls(); renderTotals(); });
   coinsEl.append(b);
 }
 function renderCoins() {
   for (const b of coinsEl.children) b.setAttribute('aria-pressed', String(b.dataset.coin === state.coin));
+  updateSummaries();
 }
+
+const QUICK_ROLLS = [0,1,2,3,5,10];
+const quickEl = $('rollQuick');
+for (const n of QUICK_ROLLS) {
+  const b = document.createElement('button');
+  b.textContent = n === 0 ? '0' : n === 1 ? '1 roll' : n + ' rolls';
+  b.dataset.n = n;
+  b.addEventListener('click', () => setRolls(n));
+  quickEl.append(b);
+}
+function setRolls(n) {
+  state.rolls[state.coin] = Math.max(0, Math.min(999, Math.round(n)));
+  store.set('rolls', state.rolls);
+  renderRolls(); renderTotals();
+}
+function renderRolls() {
+  const c = COINS[state.coin];
+  const n = state.rolls[state.coin] || 0;
+  $('rollCount').textContent = n;
+  const rollValue = n * c.rollSize * c.value;
+  $('rollInfo').textContent = `1 roll = ${c.rollSize} ${c.plural} = ${money.format(c.rollSize * c.value)}`;
+  $('rollBreakdown').textContent = `${n} roll${n===1?'':'s'} = ${n*c.rollSize} coins = ${money.format(rollValue)}`;
+  for (const b of quickEl.children) b.setAttribute('aria-pressed', String(+b.dataset.n === n));
+  updateSummaries();
+}
+$('rollPlus').addEventListener('click', () => setRolls((state.rolls[state.coin]||0) + 1));
+$('rollMinus').addEventListener('click', () => setRolls((state.rolls[state.coin]||0) - 1));
 
 /* ---------- Detector worker ---------- */
 const statusEl = $('status');
@@ -287,7 +445,7 @@ try {
       setStatus('Ready', 'ok');
       if (state.hasPhoto && !state.detected.length) detect();
     } else if (msg.type === 'result') {
-      if (msg.id !== state.jobId) return; // a newer run superseded this one
+      if (msg.id !== state.jobId) return;
       showBusy(false);
       onDetected(msg.circles, msg.radius);
     } else if (msg.type === 'error') {
@@ -350,7 +508,6 @@ for (const id of ['cameraInput', 'fileInput']) {
 }
 $('newBtn').addEventListener('click', () => $('cameraInput').click());
 
-// Drag and drop for desktop
 const picker = $('picker');
 ['dragenter', 'dragover'].forEach(t => document.addEventListener(t, e => { e.preventDefault(); picker.classList.add('drag'); }));
 ['dragleave', 'drop'].forEach(t => document.addEventListener(t, e => { e.preventDefault(); picker.classList.remove('drag'); }));
@@ -377,7 +534,6 @@ function detect() {
 function onDetected(circles, radius) {
   state.detected = circles.map(c => ({ x: c.x, y: c.y, r: c.r, manual: false }));
   state.radius = radius || 0;
-  // Keep coins the user added unless the detector now covers them.
   const manual = state.markers.filter(m => m.manual && !state.detected.some(d => Math.hypot(d.x - m.x, d.y - m.y) < d.r));
   state.markers = state.detected.concat(manual);
   state.history = [];
@@ -401,10 +557,10 @@ function markerRadius() {
 overlay.addEventListener('click', e => {
   if (!state.hasPhoto || !$('busy').hidden) return;
   const rect = overlay.getBoundingClientRect();
-  const k = overlay.width / rect.width; // photo pixels per CSS pixel
+  const k = overlay.width / rect.width;
   const x = (e.clientX - rect.left) * k;
   const y = (e.clientY - rect.top) * k;
-  const slop = 16 * k; // a little extra reach for fingers on small coins
+  const slop = 16 * k;
 
   let hit = -1, best = Infinity;
   state.markers.forEach((m, i) => {
@@ -447,10 +603,11 @@ $('sensOut').value = sens.value;
 let sensTimer;
 sens.addEventListener('input', () => {
   $('sensOut').value = sens.value;
+  updateSummaries();
   clearTimeout(sensTimer);
   sensTimer = setTimeout(() => { store.set('sensitivity', +sens.value); detect(); }, 250);
 });
-$('sameSize').addEventListener('change', detect);
+$('sameSize').addEventListener('change', () => { updateSummaries(); detect(); });
 
 /* ---------- Rendering ---------- */
 function draw() {
@@ -463,7 +620,6 @@ function draw() {
 
   state.markers.forEach((m, i) => {
     const color = m.manual ? manual : good;
-    // dark halo so the ring shows on light and dark coins alike
     octx.beginPath();
     octx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
     octx.lineWidth = lw * 2.4;
@@ -475,7 +631,6 @@ function draw() {
     octx.stroke();
     octx.setLineDash([]);
 
-    // numbered badge in the middle
     const fs = Math.max(11, Math.min(m.r * 0.55, 40));
     const label = String(i + 1);
     octx.font = `700 ${fs}px system-ui, sans-serif`;
@@ -493,11 +648,25 @@ function draw() {
 }
 
 function renderTotals() {
-  const n = state.markers.length;
-  const c = COINS[state.coin];
-  $('count').textContent = n;
-  $('countLabel').textContent = n === 1 ? c.label.toLowerCase() + (state.coin === 'dollar' ? ' coin' : '') : c.plural;
-  $('total').textContent = money.format(Math.round(n * c.value * 100) / 100);
+  const photoCount = state.markers.length;
+  if (state.mode === 'quick') {
+    $('count').textContent = photoCount;
+    $('countLabel').textContent = photoCount === 1 ? 'coin' : 'coins';
+    $('countBreakdown').textContent = '';
+    $('total').innerHTML = `${photoCount} <small>coins</small>`;
+  } else {
+    const c = COINS[state.coin];
+    const rolls = state.rolls[state.coin] || 0;
+    const rollCoins = rolls * c.rollSize;
+    const totalCoins = photoCount + rollCoins;
+    const totalValue = totalCoins * c.value;
+    $('count').textContent = totalCoins;
+    $('countLabel').textContent = totalCoins === 1 ? c.label.toLowerCase() + (state.coin === 'dollar' ? ' coin' : '') : c.plural;
+    $('countBreakdown').textContent =
+      rolls > 0 ? `${photoCount} photographed + ${rolls} roll${rolls===1?'':'s'} (${rollCoins}) = ${totalCoins} total` :
+      (photoCount > 0 ? `${photoCount} photographed` : '');
+    $('total').textContent = money.format(Math.round(totalValue * 100) / 100);
+  }
   $('undoBtn').disabled = !state.history.length;
   $('resetBtn').disabled = !state.hasPhoto;
 }
@@ -529,6 +698,9 @@ if ('serviceWorker' in navigator && window.isSecureContext) {
 }
 
 renderCoins();
+renderRolls();
+renderMode();
+updateSummaries();
 renderTotals();
 </script>
 </body>
