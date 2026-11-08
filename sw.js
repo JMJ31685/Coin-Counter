@@ -1,5 +1,5 @@
 /* Offline support: cache the app (OpenCV.js included) on install, then serve from cache. */
-const CACHE = 'coin-counter-v1';
+const CACHE = 'coin-counter-v2';
 const ASSETS = [
   './',
   'index.html',
